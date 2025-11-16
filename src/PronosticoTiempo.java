@@ -1,5 +1,3 @@
-package Pronostico;
-
 import java.util.Scanner;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
