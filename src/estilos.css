@@ -1,140 +1,178 @@
-/* ----------------- GLOBAL (CLARO) ----------------- */
+/* ================= GLOBAL ================= */
 .app-root {
-    -fx-background-color: #f5f7fb;
-    -fx-font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial;
-}
-
-/* ----------------- GLOBAL (DARK) ----------------- */
-.app-root-dark {
-    -fx-background-color: #111214;
-    -fx-font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    -fx-text-fill: #ddd;
-}
-
-/* ---------------- TOP BAR ---------------- */
-.top-bar {
-    -fx-padding: 16px;
-    -fx-alignment: center-left;
-}
-
-.location-label {
-    -fx-font-size: 15px;
-    -fx-font-weight: 700;
+    -fx-background-color: #f5f7fb; /* Fondo claro por defecto */
+    -fx-font-family: "Segoe UI", Roboto, Arial;
     -fx-text-fill: #222;
 }
 
-.app-root-dark .location-label {
-    -fx-text-fill: #eee;
+/* Este se aplica al StackPane padre */
+.app-root-dark {
+    -fx-background-color: #0e0f11;
+    -fx-font-family: "Segoe UI", Roboto, Arial;
+    -fx-text-fill: #eaeaea;
 }
 
+/* 🔥🔥 EL ARREGLO MÁGICO ESTÁ AQUÍ 🔥🔥 */
+/* Cuando el padre es oscuro, hacemos que el hijo (la app) sea transparente
+   para que se vea el color negro de fondo */
+.app-root-dark .app-root {
+    -fx-background-color: transparent;
+}
+
+/* Aseguramos que los hijos hereden el color de texto */
+.app-root-dark .label,
+.app-root-dark .text {
+    -fx-text-fill: #eaeaea;
+}
+
+/* ================= TOP BAR ================= */
+.top-bar {
+    -fx-alignment: center-left;
+    -fx-padding: 16px;
+}
+
+.location-label { -fx-font-size: 15px; -fx-font-weight: 700; -fx-text-fill: #222; }
+.app-root-dark .location-label { -fx-text-fill: #eaeaea; }
+
 .change-city-btn {
-    -fx-background-color: #eeeeee;
+    -fx-background-color: #eaeaea;
     -fx-background-radius: 18px;
     -fx-padding: 6px 10px;
     -fx-font-size: 12px;
-    -fx-text-fill: #333;
+    -fx-text-fill: #222;
+    -fx-border-width: 0;
+    -fx-min-height: 28px;
+    -fx-alignment: center;
 }
-
 .app-root-dark .change-city-btn {
     -fx-background-color: #2a2a2a;
-    -fx-text-fill: #ddd;
+    -fx-text-fill: #eaeaea;
 }
 
-/* ---------------- CENTRAL CARD ---------------- */
+/* ================= TARJETA PRINCIPAL ================= */
 .center-card {
     -fx-background-radius: 22px;
     -fx-background-color: linear-gradient(to bottom, #ffe082, #ffb300);
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.18), 14, 0.2, 0, 6);
     -fx-padding: 0;
-    -fx-max-width: 100%;
 }
 
-/* SVG inside card */
 .sun-svg {
     -fx-fill: transparent;
     -fx-stroke: #333;
     -fx-stroke-width: 1.6;
     -fx-translate-y: -6px;
 }
+/* En modo oscuro, el sol sigue siendo oscuro sobre la tarjeta amarilla */
+.app-root-dark .sun-svg { -fx-stroke: #222; }
 
-/* Texts */
 .center-temp-large {
     -fx-font-size: 72px;
     -fx-font-weight: 800;
     -fx-text-fill: #222;
 }
+.app-root-dark .center-temp-large { -fx-text-fill: #222; }
 
 .center-condition-label {
     -fx-font-size: 24px;
     -fx-font-weight: 700;
-    -fx-text-fill: #222;
+    -fx-text-fill: #333;
+}
+.app-root-dark .center-condition-label { -fx-text-fill: #222; }
+
+
+/* ================= PANEL INTERMEDIO ================= */
+.info-panel {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12px;
+    -fx-padding: 14px 18px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 5, 0.1, 0, 2);
+    -fx-spacing: 10px;
+}
+.app-root-dark .info-panel {
+    -fx-background-color: #1e1f20;
 }
 
-.center-feels-like {
-    -fx-font-size: 13px;
-    -fx-text-fill: #555;
-}
+.info-row { -fx-spacing: 6px; }
 
-.app-root-dark .center-temp-large,
-.app-root-dark .center-condition-label,
-.app-root-dark .center-feels-like {
-    -fx-text-fill: #eee;
+.info-label {
+    -fx-text-fill: #333;
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
 }
+.app-root-dark .info-label { -fx-text-fill: #ddd; }
 
-/* ---------------- BOTTOM / LIST ---------------- */
-.bottom-scroll-pane {
-    -fx-background-color: transparent;
-    -fx-padding: 10px 12px 20px 12px;
+.info-value {
+    -fx-text-fill: #666;
+    -fx-font-size: 14px;
 }
+.app-root-dark .info-value { -fx-text-fill: #bbb; }
 
+
+/* ================= LISTA 8 DÍAS ================= */
 .daily-list {
     -fx-background-color: #fff;
     -fx-background-radius: 12px;
-    -fx-padding: 6px;
+    -fx-padding: 10;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 6, 0.1, 0, 2);
 }
+.app-root-dark .daily-list { -fx-background-color: #151516; }
 
+.day-row { -fx-alignment: center-left; }
 
-.app-root-dark .daily-list {
-    -fx-background-color: #151516;
-}
-
-.day-row {
-    -fx-border-color: transparent;
-    -fx-alignment: center-left;
-}
-
-.day-label {
-    -fx-font-size: 15px;
-    -fx-font-weight: 600;
-    -fx-text-fill: #333;
-}
-
+.day-label { -fx-font-size: 15px; -fx-font-weight: 600; -fx-text-fill: #333; }
 .app-root-dark .day-label { -fx-text-fill: #ddd; }
 
-.day-icon {
-    -fx-stroke: #333;
-    -fx-fill: transparent;
-    -fx-stroke-width: 1.4;
-    -fx-pref-width: 22px;
-    -fx-pref-height: 22px;
+.day-icon { -fx-stroke: #333; -fx-fill: transparent; -fx-stroke-width: 1.4; }
+.app-root-dark .day-icon { -fx-stroke: #eee; }
+
+.temp-label { -fx-font-size: 13px; -fx-text-fill: #666; }
+.app-root-dark .temp-label { -fx-text-fill: #cfcfcf; }
+
+
+/* ================= SCROLLBAR & MODAL ================= */
+.no-scrollbar .scroll-bar {
+    -fx-opacity: 0;
+    -fx-max-width: 0;
+    -fx-max-height: 0;
 }
-
-.app-root-dark .day-icon { -fx-stroke: #ddd; }
-
-.temp-label {
-    -fx-font-size: 13px;
-    -fx-text-fill: #666;
-}
-
-/* spacing helpers */
-.center-text-content { -fx-padding: 0 0 18px 0; }
-
-
 .scroll-pane .viewport {
     -fx-background-color: transparent;
 }
-
-.app-root-dark .scroll-pane .viewport {
+.scroll-pane {
     -fx-background-color: transparent;
 }
+
+/* Modal */
+.city-modal {
+    -fx-background-color: white;
+    -fx-background-radius: 14;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.20), 18, 0.18, 0, 4);
+    -fx-padding: 12;
+}
+.app-root-dark .city-modal {
+    -fx-background-color: #252628; /* Fondo oscuro para el modal */
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 22, 0.30, 0, 4);
+}
+
+.modal-title { -fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #222; }
+.app-root-dark .modal-title { -fx-text-fill: #fff; }
+
+.modal-close { -fx-font-size: 15px; -fx-text-fill: #666; -fx-cursor: hand; }
+.app-root-dark .modal-close { -fx-text-fill: #ccc; }
+
+.city-input {
+    -fx-background-color: #f1f1f1;
+    -fx-border-color: #ccc;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-padding: 8 10;
+    -fx-text-fill: #222;
+}
+.app-root-dark .city-input {
+    -fx-background-color: #151516;
+    -fx-text-fill: #eee;
+    -fx-border-color: #444;
+}
+
+.modal-error { -fx-text-fill: #e33; -fx-font-size: 12px; }

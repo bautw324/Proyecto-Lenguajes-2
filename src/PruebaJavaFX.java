@@ -1,4 +1,6 @@
-import javafx.animation.*;
+import javafx.animation.FadeTransition;
+import javafx.animation.ParallelTransition;
+import javafx.animation.ScaleTransition;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -6,63 +8,83 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.SVGPath;
-import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+
+import java.util.List;
+import java.util.function.Consumer;
 
 public class PruebaJavaFX extends Application {
 
     private VBox card;
-    private Label tempLabel, condLabel, feelsLabel;
+    private Label tempLabel, condLabel;
     private StackPane centerStack;
-    private boolean darkMode = false;
 
     @Override
     public void start(Stage primaryStage) {
+
+        // 1. CREAMOS EL STACKPANE ROOT PRIMERO (Padre supremo)
+        // Esto es clave para que el Dark Mode afecte tanto a la app como al modal
+        StackPane rootStack = new StackPane();
+
+        /* =====================================================
+         * ROOT DEL CONTENIDO (La App en sí)
+         * ===================================================== */
         BorderPane root = new BorderPane();
         root.getStyleClass().add("app-root");
 
-        // TOP
+        // Agregamos la app al stack principal
+        rootStack.getChildren().add(root);
+
+        /* =====================================================
+         * SECCIÓN SUPERIOR (TOP BAR)
+         * ===================================================== */
         HBox top = new HBox(10);
         top.getStyleClass().add("top-bar");
         top.setPadding(new Insets(16, 16, 6, 16));
+
         Label location = new Label("Salta, Argentina");
         location.getStyleClass().add("location-label");
+
         Button changeBtn = new Button("Cambiar");
         changeBtn.getStyleClass().add("change-city-btn");
 
-        // Dark mode toggle
         ToggleButton darkToggle = new ToggleButton("🌙");
         darkToggle.getStyleClass().add("change-city-btn");
-        darkToggle.setOnAction(e -> toggleDarkMode(root, darkToggle.isSelected()));
+
+        // ARREGLO DARK MODE: Le pasamos 'rootStack' para que aplique la clase al padre de todo
+        darkToggle.setOnAction(e -> toggleDarkMode(rootStack, darkToggle.isSelected()));
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
+
         top.getChildren().addAll(location, spacer, changeBtn, darkToggle);
-        root.setTop(top);
 
-        // CENTER CARD (tarjeta amarilla)
+        /* =====================================================
+         * TARJETA PRINCIPAL (Temperatura actual)
+         * ===================================================== */
         centerStack = new StackPane();
-
-        // 💥 FIX MÁS IMPORTANTE: sin padding lateral
-//        centerStack.setPadding(new Insets(0));
         centerStack.setPadding(new Insets(0, 12, 0, 12));
-
 
         card = new VBox(6);
         card.getStyleClass().add("center-card");
-        card.setPrefHeight(260);
-        card.setMaxHeight(260);
+        card.setMinHeight(380);
+        card.setPrefHeight(380);
+        card.setMaxHeight(380);
         card.setAlignment(Pos.CENTER);
+        StackPane.setMargin(card, new Insets(0, 0, 12, 0));
 
-        // 💥 SEGUNDO FIX: la tarjeta ocupa todo el ancho
-        card.setMaxWidth(Double.MAX_VALUE);
-        card.setPrefWidth(Double.MAX_VALUE);
-        StackPane.setAlignment(card, Pos.CENTER);
+        // Ajuste de ancho consistente
+        card.maxWidthProperty().bind(root.widthProperty().subtract(24));
+        card.prefWidthProperty().bind(root.widthProperty().subtract(24));
 
-        // SVG Sol (vector) - Opción A
+        // ICONO DEL SOL
         SVGPath sunSvg = new SVGPath();
+        sunSvg.setScaleX(1.1);
+        sunSvg.setScaleY(1.1);
+        sunSvg.setTranslateY(-6);
         sunSvg.setContent(
                 "M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z " +
                         "M12 1v2 M12 21v2 M4.2 4.2l1.4 1.4 M18.4 18.4l1.4 1.4 " +
@@ -70,39 +92,46 @@ public class PruebaJavaFX extends Application {
         );
         sunSvg.getStyleClass().add("sun-svg");
 
-        // Big temp and texts
         tempLabel = new Label("27°C");
         tempLabel.getStyleClass().add("center-temp-large");
 
         condLabel = new Label("Soleado");
         condLabel.getStyleClass().add("center-condition-label");
 
-        feelsLabel = new Label("Sensación térmica 28°C");
-        feelsLabel.getStyleClass().add("center-feels-like");
-
-        VBox textContainer = new VBox(4, tempLabel, condLabel, feelsLabel);
+        VBox textContainer = new VBox(4, tempLabel, condLabel);
         textContainer.setAlignment(Pos.CENTER);
-        textContainer.getStyleClass().add("center-text-content");
 
-        // put sun + texts (sun above)
         VBox sunAndText = new VBox(0, sunSvg, textContainer);
         sunAndText.setAlignment(Pos.CENTER);
+
         card.getChildren().add(sunAndText);
-
-//        centerStack.getChildren().add(card);
         centerStack.getChildren().add(card);
-        StackPane.setAlignment(card, Pos.CENTER);
-        StackPane.setMargin(card, new Insets(0));
-
-        card.maxWidthProperty().bind(centerStack.widthProperty());
 
 
-        root.setCenter(centerStack);
+        /* =====================================================
+         * PANEL INTERMEDIO (Máx, Mín, Humedad, Sensación)
+         * ===================================================== */
+        VBox infoPanel = new VBox();
+        infoPanel.getStyleClass().add("info-panel");
+        infoPanel.maxWidthProperty().bind(root.widthProperty().subtract(24));
+        infoPanel.prefWidthProperty().bind(root.widthProperty().subtract(24));
 
-        // BOTTOM -> lista con scroll
+        infoPanel.getChildren().addAll(
+                createInfoRow("Máx: ", "29°"),
+                createInfoRow("Mín: ", "18°"),
+                createInfoRow("Humedad: ", "60%"),
+                createInfoRow("Sensación: ", "28°")
+        );
+
+
+        /* =====================================================
+         * LISTA DE LOS 8 DÍAS
+         * ===================================================== */
         VBox dailyList = new VBox();
         dailyList.getStyleClass().add("daily-list");
-        dailyList.setPadding(new Insets(8));
+        dailyList.setPadding(new Insets(10, 0, 10, 0));
+        dailyList.maxWidthProperty().bind(root.widthProperty().subtract(24));
+        dailyList.prefWidthProperty().bind(root.widthProperty().subtract(24));
 
         dailyList.getChildren().addAll(
                 createDayRow("Miércoles", iconCloud(), "22° / 12°"),
@@ -116,64 +145,59 @@ public class PruebaJavaFX extends Application {
         );
 
 
+        /* =====================================================
+         * SCROLL GENERAL (oculta barra)
+         * ===================================================== */
+        VBox appContent = new VBox(16);
+        appContent.setPadding(new Insets(0, 12, 16, 12));
+        appContent.getChildren().addAll(top, centerStack, infoPanel, dailyList);
 
-        ScrollPane scroll = new ScrollPane(dailyList);
-        scroll.getStyleClass().add("bottom-scroll-pane");
-        scroll.setFitToWidth(true);
-        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        root.setBottom(scroll);
+        ScrollPane mainScroll = new ScrollPane(appContent);
+        mainScroll.setFitToWidth(true);
+        mainScroll.setPannable(true);
+        mainScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        mainScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        mainScroll.getStyleClass().add("no-scrollbar");
 
-        // Animación al presionar "Cambiar" (ejemplo visual)
-        changeBtn.setOnAction(_ -> {
-            // animación de salida
-            TranslateTransition out = new TranslateTransition(Duration.millis(300), card);
-            out.setByY(-30);
-            FadeTransition fadeOut = new FadeTransition(Duration.millis(300), card);
-            fadeOut.setToValue(0.0);
+        root.setCenter(mainScroll);
 
-            out.setOnFinished(ev -> {
-                // aquí iría la actualización de datos con la API antes de mostrar
-                tempLabel.setText("19°C");
-                condLabel.setText("Nublado");
-                feelsLabel.setText("Sensación térmica 18°C");
 
-                // animación de entrada
-                TranslateTransition in = new TranslateTransition(Duration.millis(350), card);
-                in.setFromY(30);
-                in.setToY(0);
-                FadeTransition fadeIn = new FadeTransition(Duration.millis(350), card);
-                fadeIn.setToValue(1.0);
+        /* =====================================================
+         * ESCENA FINAL
+         * ===================================================== */
+        // ARREGLO: Usamos rootStack en la escena, no root
+        Scene scene = new Scene(rootStack, 360, 700);
 
-                ParallelTransition pIn = new ParallelTransition(in, fadeIn);
-                pIn.play();
-            });
+        // Acción del botón cambiar
+        changeBtn.setOnAction(e ->
+                showCityOverlay(rootStack, city -> location.setText(city + ", Argentina"))
+        );
 
-            ParallelTransition pOut = new ParallelTransition(out, fadeOut);
-            pOut.play();
-        });
-
-        Scene scene = new Scene(root, 360, 700);
         scene.getStylesheets().add("estilos.css");
+
         primaryStage.setScene(scene);
         primaryStage.setTitle("App Del Jodido CLIMAA ☠️☠️");
         primaryStage.setResizable(false);
         primaryStage.show();
-
-
-
     }
 
-
-    // Toggle dark mode (solo cambia clase raíz)
-    private void toggleDarkMode(Region root, boolean enable) {
-        darkMode = enable;
+    private void toggleDarkMode(Region rootStack, boolean enable) {
         if (enable) {
-            root.getStyleClass().remove("app-root");
-            root.getStyleClass().add("app-root-dark");
+            if (!rootStack.getStyleClass().contains("app-root-dark")) {
+                rootStack.getStyleClass().add("app-root-dark");
+            }
         } else {
-            root.getStyleClass().remove("app-root-dark");
-            root.getStyleClass().add("app-root");
+            rootStack.getStyleClass().remove("app-root-dark");
         }
+    }
+
+    private HBox createInfoRow(String label, String value) {
+        HBox row = new HBox();
+        row.getStyleClass().add("info-row");
+        Label l = new Label(label); l.getStyleClass().add("info-label");
+        Label v = new Label(value); v.getStyleClass().add("info-value");
+        row.getChildren().addAll(l, v);
+        return row;
     }
 
     private HBox createDayRow(String day, SVGPath icon, String temps) {
@@ -199,31 +223,117 @@ public class PruebaJavaFX extends Application {
         return row;
     }
 
-    // SVG icons (vectoriales). Podés reemplazarlos por paths más complejos si querés.
+    private void showCityOverlay(StackPane rootStack, Consumer<String> onCitySelected) {
+
+        // BACKDROP
+        Rectangle backdrop = new Rectangle();
+        backdrop.setFill(Color.rgb(0, 0, 0, 0.45));
+        backdrop.widthProperty().bind(rootStack.widthProperty());
+        backdrop.heightProperty().bind(rootStack.heightProperty());
+
+        // MODAL
+        VBox modal = new VBox(12);
+        modal.getStyleClass().add("city-modal");
+        modal.setAlignment(Pos.TOP_CENTER);
+        modal.setPadding(new Insets(16));
+        modal.setMaxWidth(280);
+
+        // 🔥🔥 ARREGLO CLAVE: Esto evita que el modal ocupe toda la altura
+        modal.setMaxHeight(Region.USE_PREF_SIZE);
+        // ------------------------------------------------------------
+
+        // DETECTAR DARK MODE EN EL ROOTSTACK
+        boolean isDark = rootStack.getStyleClass().contains("app-root-dark");
+        if (isDark) modal.getStyleClass().add("dark");
+
+        // Close Button
+        Label closeBtn = new Label("✕");
+        closeBtn.getStyleClass().add("modal-close");
+        HBox closeBox = new HBox(closeBtn);
+        closeBox.setAlignment(Pos.TOP_RIGHT);
+
+        // Título e Input
+        Label title = new Label("Cambiar ciudad");
+        title.getStyleClass().add("modal-title");
+
+        TextField input = new TextField();
+        input.setPromptText("Ej: Salta");
+        input.getStyleClass().add("city-input");
+        input.setPrefWidth(200);
+
+        Label errorLabel = new Label();
+        errorLabel.getStyleClass().add("modal-error");
+        errorLabel.setVisible(false);
+
+        Button ok = new Button("Aceptar");
+        Button cancel = new Button("Cancelar");
+        ok.getStyleClass().add("change-city-btn");
+        cancel.getStyleClass().add("change-city-btn");
+
+        HBox buttonRow = new HBox(10, ok, cancel);
+        buttonRow.setAlignment(Pos.CENTER);
+
+        modal.getChildren().addAll(closeBox, title, input, errorLabel, buttonRow);
+
+        StackPane overlay = new StackPane(backdrop, modal);
+        StackPane.setAlignment(modal, Pos.CENTER);
+
+        rootStack.getChildren().add(overlay);
+
+        // Eventos
+        Runnable closeAction = () -> rootStack.getChildren().remove(overlay);
+        closeBtn.setOnMouseClicked(e -> closeAction.run());
+        cancel.setOnAction(e -> closeAction.run());
+
+        ok.setOnAction(e -> {
+            String city = input.getText().trim();
+            if (city.isEmpty()) {
+                errorLabel.setText("Escribí una ciudad.");
+                errorLabel.setVisible(true);
+                return;
+            }
+            List<String> valid = List.of("Salta", "Buenos Aires", "Córdoba", "Jujuy", "Rosario");
+            if (!valid.contains(city)) {
+                errorLabel.setText("Ciudad no encontrada.");
+                errorLabel.setVisible(true);
+                return;
+            }
+            onCitySelected.accept(city);
+            closeAction.run();
+        });
+
+        // Animación Entrada
+        modal.setOpacity(0);
+        modal.setScaleX(0.92); modal.setScaleY(0.92);
+        FadeTransition ft = new FadeTransition(Duration.millis(150), modal);
+        ft.setToValue(1);
+        ScaleTransition st = new ScaleTransition(Duration.millis(150), modal);
+        st.setToX(1); st.setToY(1);
+        new ParallelTransition(ft, st).play();
+    }
+
+
+    // --- ICONOS SVG ---
     private SVGPath iconSun() {
         SVGPath p = new SVGPath();
         p.setContent("M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z");
         return p;
     }
-
     private SVGPath iconCloud() {
         SVGPath p = new SVGPath();
         p.setContent("M20 17.5A4.5 4.5 0 0 0 15.5 13h-1A6 6 0 0 0 6 16");
         return p;
     }
-
     private SVGPath iconRain() {
         SVGPath p = new SVGPath();
         p.setContent("M20 16.5A4.5 4.5 0 0 0 15.5 12h-1A6 6 0 0 0 6 15 M8 19l1 2 M12 19l1 2 M16 19l1 2");
         return p;
     }
-
     private SVGPath iconTherm() {
         SVGPath p = new SVGPath();
         p.setContent("M13 3a2 2 0 0 0-4 0v7a3 3 0 1 0 4 0z");
         return p;
     }
-
     private SVGPath iconPartly() {
         SVGPath p = new SVGPath();
         p.setContent("M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z M18 8h.01");
