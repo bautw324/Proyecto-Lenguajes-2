@@ -21,13 +21,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
 
-/**
- * Clase principal de la aplicación JavaFX.
- * Maneja la construcción de la interfaz gráfica, eventos y actualizaciones de UI.
- */
 public class PruebaJavaFX extends Application {
 
-    // Componentes globales para permitir su actualización dinámica
+    // Componentes de la UI
     private VBox card;
     private Label locationLabel, tempLabel, condLabel;
     private VBox infoPanel, dailyList;
@@ -35,14 +31,12 @@ public class PruebaJavaFX extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        // 1. Configuración del Contenedor Raíz (StackPane)
-        // Se utiliza para superponer elementos como el Modal de búsqueda sobre la aplicación.
         rootStack = new StackPane();
         BorderPane root = new BorderPane();
         root.getStyleClass().add("app-root");
         rootStack.getChildren().add(root);
 
-        /* ================= BARRA SUPERIOR ================= */
+        // --- TOP BAR ---
         HBox top = new HBox(10);
         top.getStyleClass().add("top-bar");
         top.setPadding(new Insets(16, 16, 6, 16));
@@ -55,7 +49,7 @@ public class PruebaJavaFX extends Application {
 
         Button changeBtn = new Button("Cambiar");
         changeBtn.getStyleClass().add("change-city-btn");
-        changeBtn.setMinWidth(Region.USE_PREF_SIZE); // Evita que el botón se deforme
+        changeBtn.setMinWidth(Region.USE_PREF_SIZE);
 
         ToggleButton darkToggle = new ToggleButton("🌙");
         darkToggle.getStyleClass().add("change-city-btn");
@@ -64,16 +58,15 @@ public class PruebaJavaFX extends Application {
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-
         top.getChildren().addAll(locationLabel, spacer, changeBtn, darkToggle);
 
-        /* ================= TARJETA CENTRAL (CLIMA ACTUAL) ================= */
+        // --- TARJETA CENTRAL ---
         StackPane centerStack = new StackPane();
         centerStack.setPadding(new Insets(0, 12, 0, 12));
 
         card = new VBox(6);
         card.getStyleClass().add("center-card");
-        card.getStyleClass().add("card-default"); // Estado inicial transparente
+        card.getStyleClass().add("card-default"); // Inicia transparente
         card.setMinHeight(380);
         card.setPrefHeight(380);
         card.setMaxHeight(380);
@@ -81,7 +74,6 @@ public class PruebaJavaFX extends Application {
         StackPane.setMargin(card, new Insets(0, 0, 12, 0));
         card.maxWidthProperty().bind(root.widthProperty().subtract(24));
 
-        // Configuración del icono principal (SVG)
         SVGPath mainIcon = iconSun();
         mainIcon.setId("main-icon");
         mainIcon.setScaleX(3.5);
@@ -99,7 +91,6 @@ public class PruebaJavaFX extends Application {
 
         VBox textContainer = new VBox(4, tempLabel, condLabel);
         textContainer.setAlignment(Pos.CENTER);
-
         VBox iconAndText = new VBox(15, mainIcon, textContainer);
         iconAndText.setAlignment(Pos.CENTER);
         iconAndText.setId("weather-container");
@@ -107,11 +98,10 @@ public class PruebaJavaFX extends Application {
         card.getChildren().add(iconAndText);
         centerStack.getChildren().add(card);
 
-        /* ================= PANELES DE INFORMACIÓN ================= */
+        // --- PANELES INFO Y LISTA ---
         Label titleInfo = new Label("Detalles del día");
         titleInfo.getStyleClass().add("section-title");
         titleInfo.setPadding(new Insets(0, 16, 5, 16));
-
         infoPanel = new VBox();
         infoPanel.getStyleClass().add("info-panel");
         infoPanel.maxWidthProperty().bind(root.widthProperty().subtract(24));
@@ -119,13 +109,12 @@ public class PruebaJavaFX extends Application {
         Label titleList = new Label("Próximos 7 días");
         titleList.getStyleClass().add("section-title");
         titleList.setPadding(new Insets(15, 16, 5, 16));
-
         dailyList = new VBox();
         dailyList.getStyleClass().add("daily-list");
         dailyList.setPadding(new Insets(10, 0, 10, 0));
         dailyList.maxWidthProperty().bind(root.widthProperty().subtract(24));
 
-        // Contenedor vertical con scroll para todo el contenido
+        // --- SCROLL GENERAL ---
         VBox appContent = new VBox(10);
         appContent.setPadding(new Insets(0, 12, 16, 12));
         appContent.getChildren().addAll(top, centerStack, titleInfo, infoPanel, titleList, dailyList);
@@ -139,30 +128,26 @@ public class PruebaJavaFX extends Application {
 
         root.setCenter(mainScroll);
 
-        // Configuración de la escena
+        // --- ESCENA ---
         Scene scene = new Scene(rootStack, 360, 700);
         changeBtn.setOnAction(e -> showCityOverlay(rootStack));
         scene.getStylesheets().add("estilos.css");
-
         primaryStage.setScene(scene);
         primaryStage.setTitle("App Clima");
         primaryStage.setResizable(false);
         primaryStage.show();
 
-        // Carga inicial por defecto
         cargarClima("Salta, Argentina");
     }
 
-    /**
-     * Inicia la carga de datos en un hilo separado para evitar congelar la interfaz gráfica.
-     */
+    /* =====================================================
+     * LÓGICA DE NEGOCIO (API)
+     * ===================================================== */
+
     private void cargarClima(String ciudadBuscada) {
         new Thread(() -> {
             try {
-                // Llamada bloqueante a la API (lógica de negocio)
                 List<ClimaDia> datos = PronosticoTiempo.consultarApi(ciudadBuscada);
-
-                // Actualización de la UI en el hilo principal de JavaFX
                 Platform.runLater(() -> actualizarInterfaz(datos));
             } catch (Exception e) {
                 Platform.runLater(() -> mostrarAlertaError("Error al cargar datos: " + e.getMessage()));
@@ -170,9 +155,6 @@ public class PruebaJavaFX extends Application {
         }).start();
     }
 
-    /**
-     * Actualiza los elementos visuales con los datos recibidos.
-     */
     private void actualizarInterfaz(List<ClimaDia> datos) {
         if (datos.isEmpty()) return;
         ClimaDia hoy = datos.get(0);
@@ -181,14 +163,13 @@ public class PruebaJavaFX extends Application {
         tempLabel.setText(Math.round(hoy.getTempActual()) + "°");
         condLabel.setText(hoy.getDescripcion());
 
-        // Actualizamos el estilo de la tarjeta según la condición
+        // Llamada al método de color (ahora corregido)
         actualizarColorTarjeta(hoy.getCondicionIngles());
 
-        // Actualizamos el icono principal
+        // Actualizar Icono
         SVGPath nuevoIcono = obtenerIconoPorCondicion(hoy.getCondicionIngles());
         nuevoIcono.setId("main-icon");
-        nuevoIcono.setScaleX(3.5);
-        nuevoIcono.setScaleY(3.5);
+        nuevoIcono.setScaleX(3.5); nuevoIcono.setScaleY(3.5);
         nuevoIcono.setTranslateY(-20);
         nuevoIcono.getStyleClass().add("sun-svg");
 
@@ -200,7 +181,7 @@ public class PruebaJavaFX extends Application {
             }
         }
 
-        // Detalles
+        // Info Panel
         infoPanel.getChildren().clear();
         infoPanel.getChildren().addAll(
                 createInfoRow("Máxima:", Math.round(hoy.getTempMax()) + "°"),
@@ -209,7 +190,7 @@ public class PruebaJavaFX extends Application {
                 createInfoRow("Sensación:", Math.round(hoy.getSensacionTermica()) + "°")
         );
 
-        // Lista de próximos días
+        // Lista de Días
         dailyList.getChildren().clear();
         for (int i = 1; i < datos.size(); i++) {
             ClimaDia dia = datos.get(i);
@@ -220,7 +201,9 @@ public class PruebaJavaFX extends Application {
         }
     }
 
-    // Muestra el modal para cambiar de ciudad
+    /* =====================================================
+     * VENTANA MODAL (BUSCADOR)
+     * ===================================================== */
     private void showCityOverlay(StackPane rootStack) {
         Rectangle backdrop = new Rectangle();
         backdrop.setFill(Color.rgb(0, 0, 0, 0.45));
@@ -240,7 +223,7 @@ public class PruebaJavaFX extends Application {
         HBox closeBox = new HBox(closeBtn); closeBox.setAlignment(Pos.TOP_RIGHT);
         Label title = new Label("Cambiar ciudad"); title.getStyleClass().add("modal-title");
         TextField input = new TextField();
-        input.setPromptText("Ej: Madrid, España");
+        input.setPromptText("Ej: Madrid");
         input.getStyleClass().add("city-input");
         input.setPrefWidth(200);
         Label errorLabel = new Label(); errorLabel.getStyleClass().add("modal-error"); errorLabel.setVisible(false);
@@ -272,6 +255,10 @@ public class PruebaJavaFX extends Application {
         ScaleTransition st = new ScaleTransition(Duration.millis(150), modal); st.setToX(1); st.setToY(1);
         new ParallelTransition(ft, st).play();
     }
+
+    /* =====================================================
+     * HELPERS Y UTILIDADES
+     * ===================================================== */
 
     private void mostrarAlertaError(String mensaje) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -329,29 +316,38 @@ public class PruebaJavaFX extends Application {
         return row;
     }
 
+    // --- CAMBIO DE COLOR DINÁMICO (CORREGIDO) ---
     private void actualizarColorTarjeta(String condicion) {
         card.getStyleClass().removeAll("card-sunny", "card-rain", "card-cloud", "card-storm", "card-snow", "card-default");
+
         if (condicion == null) {
             card.getStyleClass().add("card-default");
             return;
         }
+
         condicion = condicion.toLowerCase();
+
         if (condicion.contains("rain") || condicion.contains("shower") || condicion.contains("lluvia")) {
             card.getStyleClass().add("card-rain");
-        } else if (condicion.contains("thunder") || condicion.contains("tormenta")) {
+        }
+        else if (condicion.contains("thunder") || condicion.contains("tormenta")) {
             card.getStyleClass().add("card-storm");
-        } else if (condicion.contains("snow") || condicion.contains("nieve")) {
+        }
+        else if (condicion.contains("snow") || condicion.contains("nieve")) {
             card.getStyleClass().add("card-snow");
-        } else if (condicion.contains("cloud") || condicion.contains("nublado") || condicion.contains("overcast") || condicion.contains("cubierto")) {
+        }
+        else if (condicion.contains("cloud") || condicion.contains("nublado") || condicion.contains("overcast") || condicion.contains("cubierto")) {
             card.getStyleClass().add("card-cloud");
-        } else if (condicion.contains("clear") || condicion.contains("sunny") || condicion.contains("despejado") || condicion.contains("soleado")) {
+        }
+        else {
+            // 🔥🔥 EL ARREGLO 🔥🔥
+            // Si no es ninguno de los malos, es soleado.
+            // Esto atrapa "Clear", "Sunny", "Fair", etc.
             card.getStyleClass().add("card-sunny");
-        } else {
-            card.getStyleClass().add("card-default");
         }
     }
 
-    // Vectores SVG para los iconos climáticos
+    // --- VECTORES SVG ---
     private SVGPath iconSun() { SVGPath p = new SVGPath(); p.setContent("M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z M12 1v2 M12 21v2 M4.2 4.2l1.4 1.4 M18.4 18.4l1.4 1.4 M1 12h2 M21 12h2 M4.2 19.8l1.4-1.4 M18.4 5.6l1.4-1.4"); return p; }
     private SVGPath iconCloud() { SVGPath p = new SVGPath(); p.setContent("M20 17.5A4.5 4.5 0 0 0 15.5 13h-1A6 6 0 0 0 6 16"); return p; }
     private SVGPath iconRain() { SVGPath p = new SVGPath(); p.setContent("M20 16.5A4.5 4.5 0 0 0 15.5 12h-1A6 6 0 0 0 6 15 M8 19l1 2 M12 19l1 2 M16 19l1 2"); return p; }
