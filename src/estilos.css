@@ -1,87 +1,182 @@
-/* ================= GLOBAL ================= */
+/* =============================================================================
+   CONFIGURACIÓN GLOBAL Y TEMA
+   ============================================================================= */
+
+/* Estilos base para el modo claro */
 .app-root {
-    -fx-background-color: #f5f7fb; /* Fondo claro por defecto */
-    -fx-font-family: "Segoe UI", Roboto, Arial;
-    -fx-text-fill: #222;
+    -fx-background-color: #f5f7fb;
+    -fx-font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    -fx-text-fill: #222222;
 }
 
-/* Este se aplica al StackPane padre */
+/* Estilos base para el modo oscuro */
 .app-root-dark {
     -fx-background-color: #0e0f11;
-    -fx-font-family: "Segoe UI", Roboto, Arial;
+    -fx-font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial;
     -fx-text-fill: #eaeaea;
 }
 
-/* 🔥🔥 EL ARREGLO MÁGICO ESTÁ AQUÍ 🔥🔥 */
-/* Cuando el padre es oscuro, hacemos que el hijo (la app) sea transparente
-   para que se vea el color negro de fondo */
+/* Ajuste de jerarquía para el Modo Oscuro:
+   Cuando el contenedor raíz (StackPane) tiene el modo oscuro, hacemos transparente
+   el BorderPane interno para que el color de fondo del padre sea visible.
+*/
 .app-root-dark .app-root {
     -fx-background-color: transparent;
 }
 
-/* Aseguramos que los hijos hereden el color de texto */
+/* Herencia de color de texto para etiquetas en modo oscuro */
 .app-root-dark .label,
 .app-root-dark .text {
     -fx-text-fill: #eaeaea;
 }
 
-/* ================= TOP BAR ================= */
+/* =============================================================================
+   BARRA SUPERIOR (TOP BAR)
+   ============================================================================= */
 .top-bar {
     -fx-alignment: center-left;
     -fx-padding: 16px;
 }
 
-.location-label { -fx-font-size: 15px; -fx-font-weight: 700; -fx-text-fill: #222; }
-.app-root-dark .location-label { -fx-text-fill: #eaeaea; }
+.location-label {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #222222;
+}
 
+.app-root-dark .location-label {
+    -fx-text-fill: #eaeaea;
+}
+
+/* Estilos para botones de acción (Cambiar ciudad / Toggle modo oscuro) */
 .change-city-btn {
     -fx-background-color: #eaeaea;
     -fx-background-radius: 18px;
     -fx-padding: 6px 10px;
     -fx-font-size: 12px;
-    -fx-text-fill: #222;
+    -fx-text-fill: #222222;
     -fx-border-width: 0;
     -fx-min-height: 28px;
     -fx-alignment: center;
+    -fx-cursor: hand;
 }
+
 .app-root-dark .change-city-btn {
     -fx-background-color: #2a2a2a;
     -fx-text-fill: #eaeaea;
 }
 
-/* ================= TARJETA PRINCIPAL ================= */
+/* =============================================================================
+   TARJETA CLIMÁTICA PRINCIPAL
+   ============================================================================= */
 .center-card {
     -fx-background-radius: 22px;
-    -fx-background-color: linear-gradient(to bottom, #ffe082, #ffb300);
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.18), 14, 0.2, 0, 6);
     -fx-padding: 0;
 }
 
+/* Variantes de color según la condición climática */
+
+/* Soleado: Degradado naranja */
+.card-sunny {
+    -fx-background-color: linear-gradient(to bottom, #ffe082, #ffb300);
+}
+
+/* Lluvia: Degradado azul oscuro profundo */
+.card-rain {
+    -fx-background-color: linear-gradient(to bottom, #141E30, #243B55);
+}
+
+/* Nublado: Degradado gris metálico */
+.card-cloud {
+    -fx-background-color: linear-gradient(to bottom, #757F9A, #D7DDE8);
+}
+
+/* Tormenta: Degradado casi negro/violeta */
+.card-storm {
+    -fx-background-color: linear-gradient(to bottom, #232526, #414345);
+}
+
+/* Nieve: Degradado blanco/celeste pálido */
+.card-snow {
+    -fx-background-color: linear-gradient(to bottom, #E0EAFC, #CFDEF3);
+}
+
+/* Estado por defecto (sin datos): Transparente con borde */
+.card-default {
+    -fx-background-color: transparent;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 2px;
+    -fx-border-radius: 22px;
+}
+
+.app-root-dark .card-default {
+    -fx-border-color: #555555;
+}
+
+/* =============================================================================
+   ELEMENTOS DENTRO DE LA TARJETA
+   ============================================================================= */
+
+/* Configuración de iconos SVG */
 .sun-svg {
     -fx-fill: transparent;
-    -fx-stroke: #333;
+    -fx-stroke: #333333;
     -fx-stroke-width: 1.6;
     -fx-translate-y: -6px;
 }
-/* En modo oscuro, el sol sigue siendo oscuro sobre la tarjeta amarilla */
-.app-root-dark .sun-svg { -fx-stroke: #222; }
 
+/* Tipografía principal */
 .center-temp-large {
     -fx-font-size: 72px;
     -fx-font-weight: 800;
-    -fx-text-fill: #222;
+    -fx-text-fill: #222222;
 }
-.app-root-dark .center-temp-large { -fx-text-fill: #222; }
 
 .center-condition-label {
     -fx-font-size: 24px;
     -fx-font-weight: 700;
-    -fx-text-fill: #333;
+    -fx-text-fill: #333333;
 }
-.app-root-dark .center-condition-label { -fx-text-fill: #222; }
 
+/* Ajustes de contraste automático para tarjetas oscuras (Lluvia/Tormenta) */
+.card-rain .label, .card-rain .sun-svg,
+.card-storm .label, .card-storm .sun-svg {
+    -fx-text-fill: #ffffff !important;
+    -fx-stroke: #ffffff !important;
+}
 
-/* ================= PANEL INTERMEDIO ================= */
+/* Ajustes de contraste para tarjetas claras (Nieve/Nublado/Sol) */
+.card-snow .label, .card-snow .sun-svg,
+.card-cloud .label, .card-cloud .sun-svg,
+.card-sunny .label, .card-sunny .sun-svg {
+    -fx-text-fill: #333333 !important;
+    -fx-stroke: #333333 !important;
+}
+
+/* Ajustes para tarjeta por defecto (transparente) */
+.card-default .label { -fx-text-fill: #333333 !important; }
+.card-default .sun-svg { -fx-stroke: #333333 !important; }
+
+.app-root-dark .card-default .label { -fx-text-fill: #eaeaea !important; }
+.app-root-dark .card-default .sun-svg { -fx-stroke: #eaeaea !important; }
+
+/* =============================================================================
+   PANELES DE INFORMACIÓN Y LISTAS
+   ============================================================================= */
+
+/* Títulos de sección (Detalles, Próximos días) */
+.section-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #888888;
+}
+
+.app-root-dark .section-title {
+    -fx-text-fill: #aaaaaa;
+}
+
+/* Panel de detalles (Humedad, Sensación, etc.) */
 .info-panel {
     -fx-background-color: #ffffff;
     -fx-background-radius: 12px;
@@ -89,90 +184,142 @@
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 5, 0.1, 0, 2);
     -fx-spacing: 10px;
 }
+
 .app-root-dark .info-panel {
     -fx-background-color: #1e1f20;
 }
 
-.info-row { -fx-spacing: 6px; }
+.info-row {
+    -fx-spacing: 6px;
+}
 
 .info-label {
-    -fx-text-fill: #333;
+    -fx-text-fill: #333333;
     -fx-font-size: 14px;
     -fx-font-weight: 600;
 }
-.app-root-dark .info-label { -fx-text-fill: #ddd; }
+
+.app-root-dark .info-label {
+    -fx-text-fill: #dddddd;
+}
 
 .info-value {
-    -fx-text-fill: #666;
+    -fx-text-fill: #666666;
     -fx-font-size: 14px;
 }
-.app-root-dark .info-value { -fx-text-fill: #bbb; }
 
+.app-root-dark .info-value {
+    -fx-text-fill: #bbbbbb;
+}
 
-/* ================= LISTA 8 DÍAS ================= */
+/* Lista de pronóstico extendido */
 .daily-list {
-    -fx-background-color: #fff;
+    -fx-background-color: #ffffff;
     -fx-background-radius: 12px;
     -fx-padding: 10;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 6, 0.1, 0, 2);
 }
-.app-root-dark .daily-list { -fx-background-color: #151516; }
 
-.day-row { -fx-alignment: center-left; }
+.app-root-dark .daily-list {
+    -fx-background-color: #151516;
+}
 
-.day-label { -fx-font-size: 15px; -fx-font-weight: 600; -fx-text-fill: #333; }
-.app-root-dark .day-label { -fx-text-fill: #ddd; }
+.day-row {
+    -fx-alignment: center-left;
+}
 
-.day-icon { -fx-stroke: #333; -fx-fill: transparent; -fx-stroke-width: 1.4; }
-.app-root-dark .day-icon { -fx-stroke: #eee; }
+.day-label {
+    -fx-font-size: 15px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #333333;
+}
 
-.temp-label { -fx-font-size: 13px; -fx-text-fill: #666; }
-.app-root-dark .temp-label { -fx-text-fill: #cfcfcf; }
+.app-root-dark .day-label {
+    -fx-text-fill: #dddddd;
+}
 
+.day-icon {
+    -fx-stroke: #333333;
+    -fx-fill: transparent;
+    -fx-stroke-width: 1.4;
+}
 
-/* ================= SCROLLBAR & MODAL ================= */
+.app-root-dark .day-icon {
+    -fx-stroke: #eeeeee;
+}
+
+.temp-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: #666666;
+}
+
+.app-root-dark .temp-label {
+    -fx-text-fill: #cfcfcf;
+}
+
+/* =============================================================================
+   COMPONENTES DE NAVEGACIÓN Y MODALES
+   ============================================================================= */
+
+/* Ocultar barras de desplazamiento nativas */
 .no-scrollbar .scroll-bar {
     -fx-opacity: 0;
     -fx-max-width: 0;
-    -fx-max-height: 0;
 }
+
+.scroll-pane,
 .scroll-pane .viewport {
     -fx-background-color: transparent;
 }
-.scroll-pane {
-    -fx-background-color: transparent;
-}
 
-/* Modal */
+/* Ventana modal de búsqueda */
 .city-modal {
-    -fx-background-color: white;
+    -fx-background-color: #ffffff;
     -fx-background-radius: 14;
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.20), 18, 0.18, 0, 4);
     -fx-padding: 12;
 }
+
 .app-root-dark .city-modal {
-    -fx-background-color: #252628; /* Fondo oscuro para el modal */
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 22, 0.30, 0, 4);
+    -fx-background-color: #252628;
 }
 
-.modal-title { -fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #222; }
-.app-root-dark .modal-title { -fx-text-fill: #fff; }
+.modal-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #222222;
+}
 
-.modal-close { -fx-font-size: 15px; -fx-text-fill: #666; -fx-cursor: hand; }
-.app-root-dark .modal-close { -fx-text-fill: #ccc; }
+.app-root-dark .modal-title {
+    -fx-text-fill: #ffffff;
+}
+
+.modal-close {
+    -fx-font-size: 15px;
+    -fx-text-fill: #666666;
+    -fx-cursor: hand;
+}
+
+.app-root-dark .modal-close {
+    -fx-text-fill: #cccccc;
+}
 
 .city-input {
     -fx-background-color: #f1f1f1;
-    -fx-border-color: #ccc;
+    -fx-border-color: #cccccc;
     -fx-background-radius: 10;
     -fx-border-radius: 10;
     -fx-padding: 8 10;
-    -fx-text-fill: #222;
-}
-.app-root-dark .city-input {
-    -fx-background-color: #151516;
-    -fx-text-fill: #eee;
-    -fx-border-color: #444;
+    -fx-text-fill: #222222;
 }
 
-.modal-error { -fx-text-fill: #e33; -fx-font-size: 12px; }
+.app-root-dark .city-input {
+    -fx-background-color: #151516;
+    -fx-text-fill: #eeeeee;
+    -fx-border-color: #444444;
+}
+
+.modal-error {
+    -fx-text-fill: #ee3333;
+    -fx-font-size: 12px;
+}

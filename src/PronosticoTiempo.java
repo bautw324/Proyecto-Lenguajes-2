@@ -1,20 +1,26 @@
-import java.util.Scanner;
+import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+/**
+ * Clase encargada de la lógica de negocio y conexión con la API externa.
+ * Realiza las peticiones HTTP y procesa la respuesta JSON manualmente.
+ */
 public class PronosticoTiempo {
-    private static final String API_KEY = "25VDM9NS7SXZ6YW54G4TYPYUK"; // SIN ESTE DATO NO FUNCIONA
-    private static final Scanner scanner = new Scanner(System.in);
+    private static final String API_KEY = "25VDM9NS7SXZ6YW54G4TYPYUK";
 
-    // Mapa para traducir condiciones del inglés al español
+    // Mapa estático para traducir las condiciones climáticas al español
     private static final Map<String, String> TRADUCCION_CONDICIONES = new HashMap<>();
-
     static {
-        // Inicializar el mapa de traducciones
         TRADUCCION_CONDICIONES.put("Clear", "Despejado");
         TRADUCCION_CONDICIONES.put("Sunny", "Soleado");
         TRADUCCION_CONDICIONES.put("Partially cloudy", "Parcialmente nublado");
@@ -26,251 +32,152 @@ public class PronosticoTiempo {
         TRADUCCION_CONDICIONES.put("Showers", "Chubascos");
         TRADUCCION_CONDICIONES.put("Thunderstorm", "Tormenta eléctrica");
         TRADUCCION_CONDICIONES.put("Snow", "Nieve");
-        TRADUCCION_CONDICIONES.put("Light snow", "Nieve ligera");
-        TRADUCCION_CONDICIONES.put("Heavy snow", "Nieve intensa");
         TRADUCCION_CONDICIONES.put("Fog", "Niebla");
         TRADUCCION_CONDICIONES.put("Mist", "Bruma");
         TRADUCCION_CONDICIONES.put("Windy", "Ventoso");
-        TRADUCCION_CONDICIONES.put("Humid", "Húmedo");
-        TRADUCCION_CONDICIONES.put("Dry", "Seco");
-        TRADUCCION_CONDICIONES.put("Hot", "Caluroso");
-        TRADUCCION_CONDICIONES.put("Cold", "Frío");
     }
 
-    public static void main(String[] args) {
-        System.out.println("=== PRONÓSTICO DEL TIEMPO SEMANAL ===");
-        System.out.print("Ingresa tu ciudad: ");
-        String ciudad = scanner.nextLine();
+    /**
+     * Realiza la petición GET a la API de Visual Crossing.
+     * @param ciudad Nombre de la ciudad a consultar.
+     * @return Lista de objetos ClimaDia con el pronóstico.
+     * @throws Exception Si la conexión falla o la ciudad no existe.
+     */
+    public static List<ClimaDia> consultarApi(String ciudad) throws Exception {
+        // Codificamos la ciudad para evitar errores con espacios o caracteres especiales en la URL
+        String ciudadCodificada = URLEncoder.encode(ciudad, StandardCharsets.UTF_8);
 
-        obtenerPronostico(ciudad);
-        scanner.close();
+        // Se agrega el parámetro lang=es para solicitar datos localizados
+        String url = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/"
+                + ciudadCodificada + "?unitGroup=metric&lang=es&key=" + API_KEY;
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        if (response.statusCode() != 200) {
+            throw new Exception("Error API: Código " + response.statusCode());
+        }
+
+        return procesarJson(response.body(), ciudad);
     }
 
-    public static void obtenerPronostico(String ciudad) {
+    /**
+     * Parsea la respuesta JSON cruda y la convierte en objetos Java.
+     * Utiliza expresiones regulares y búsqueda de cadenas para extraer los valores.
+     */
+    private static List<ClimaDia> procesarJson(String jsonResponse, String ciudadBuscada) {
+        List<ClimaDia> listaDias = new ArrayList<>();
+
+        // Intento de extracción robusta del nombre completo de la ubicación
+        String ciudadReal = extraerDireccionManual(jsonResponse);
+
+        // Si la API no devuelve una dirección resuelta, utilizamos la ingresada por el usuario
+        if (ciudadReal.isEmpty()) {
+            ciudadReal = ciudadBuscada;
+        }
+
+        // Formateamos el nombre para que cada palabra comience con mayúscula
+        ciudadReal = capitalizarTexto(ciudadReal);
+
+        // Separamos el JSON en bloques por cada día
+        List<String> diasJson = separarDias(jsonResponse);
+        int limite = Math.min(diasJson.size(), 8);
+
+        for (int i = 0; i < limite; i++) {
+            String diaJson = diasJson.get(i);
+
+            // Extracción de datos usando patrones Regex para mayor precisión
+            String fecha = extraerConRegex(diaJson, "\"datetime\"\\s*:\\s*\"([^\"]+)\"");
+            String condIngles = extraerConRegex(diaJson, "\"conditions\"\\s*:\\s*\"([^\"]+)\"");
+
+            double temp = extraerDoubleRegex(diaJson, "\"temp\"\\s*:\\s*([-0-9.]+)");
+            double max = extraerDoubleRegex(diaJson, "\"tempmax\"\\s*:\\s*([-0-9.]+)");
+            double min = extraerDoubleRegex(diaJson, "\"tempmin\"\\s*:\\s*([-0-9.]+)");
+            double hum = extraerDoubleRegex(diaJson, "\"humidity\"\\s*:\\s*([-0-9.]+)");
+            double sensacion = extraerDoubleRegex(diaJson, "\"feelslike\"\\s*:\\s*([-0-9.]+)");
+
+            String condEspanol = traducirCondiciones(condIngles);
+
+            ClimaDia dia = new ClimaDia(ciudadReal, fecha, condEspanol, condIngles, temp, max, min, hum, sensacion);
+            listaDias.add(dia);
+        }
+        return listaDias;
+    }
+
+    // Busca la clave "resolvedAddress" manualmente para evitar errores con comas o formatos inesperados
+    private static String extraerDireccionManual(String json) {
         try {
-            String url = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/"
-                    + ciudad + "?unitGroup=metric&key=" + API_KEY;
+            String key = "\"resolvedAddress\"";
+            int idx = json.indexOf(key);
+            if (idx == -1) return "";
 
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = client.send(
-                    request,
-                    HttpResponse.BodyHandlers.ofString()
-            );
-
-            if (response.statusCode() == 200) {
-                mostrarDatosTiempoCompleto(response.body(), ciudad);
-            } else {
-                System.out.println("Error: Ciudad no encontrada. Código: " + response.statusCode());
-            }
-
-        } catch (Exception e) {
-            System.out.println("Error al conectar con el servicio: " + e.getMessage());
-        }
-    }
-
-    public static void mostrarDatosTiempoCompleto(String jsonResponse, String ciudad) {
-        try {
-            // Primero mostramos el pronóstico actual
-            mostrarPronosticoActual(jsonResponse, ciudad);
-
-            // Luego mostramos el pronóstico semanal
-            mostrarPronosticoSemanal(jsonResponse);
-
-        } catch (Exception e) {
-            System.out.println("Error al procesar los datos: " + e.getMessage());
-        }
-    }
-
-    public static void mostrarPronosticoActual(String jsonResponse, String ciudad) {
-        try {
-            // Extraer datos del día actual (primer objeto en el array "days")
-            String diaActual = extraerDiaEspecifico(jsonResponse, 0);
-
-            if (diaActual != null) {
-                String tempActual = extraerValor(diaActual, "\"temp\":");
-                String tempMax = extraerValor(diaActual, "\"tempmax\":");
-                String tempMin = extraerValor(diaActual, "\"tempmin\":");
-                String condicionesIngles = extraerValorTexto(diaActual, "\"conditions\":");
-                String condicionesEspanol = traducirCondiciones(condicionesIngles);
-                String humedad = extraerValor(diaActual, "\"humidity\":");
-                String fecha = extraerValorTexto(diaActual, "\"datetime\":");
-                String fechaFormateada = formatearFecha(fecha);
-
-                System.out.println("\n" + "═".repeat(50));
-                System.out.println("🌤️ PRONÓSTICO ACTUAL PARA " + ciudad.toUpperCase());
-                System.out.println("═".repeat(50));
-                System.out.println("📅 Fecha: " + fechaFormateada);
-                System.out.println("🌡️ Temperatura actual: " + tempActual + "°C");
-                System.out.println("📊 Máxima/Mínima: " + tempMax + "°C / " + tempMin + "°C");
-                System.out.println("☁️ Condiciones: " + condicionesEspanol);
-                System.out.println("💧 Humedad: " + humedad + "%");
-            }
-            System.out.println("─".repeat(50));
-
-        } catch (Exception e) {
-            System.out.println("Error al obtener pronóstico actual: " + e.getMessage());
-        }
-    }
-
-    public static void mostrarPronosticoSemanal(String jsonResponse) {
-        try {
-            System.out.println("\n📅 PRONÓSTICO SEMANAL");
-            System.out.println("═".repeat(70));
-            System.out.printf("%-12s %-20s %-12s %-12s %-10s\n",
-                    "FECHA", "CONDICIONES", "MÁXIMA", "MÍNIMA", "HUMEDAD");
-            System.out.println("─".repeat(70));
-
-            // Extraer todos los días (mostramos 7 días)
-            for (int i = 0; i < 7; i++) {
-                String diaJson = extraerDiaEspecifico(jsonResponse, i);
-
-                if (diaJson != null) {
-                    String fecha = extraerValorTexto(diaJson, "\"datetime\":");
-                    String tempMax = extraerValor(diaJson, "\"tempmax\":");
-                    String tempMin = extraerValor(diaJson, "\"tempmin\":");
-                    String condicionesIngles = extraerValorTexto(diaJson, "\"conditions\":");
-                    String condicionesEspanol = traducirCondiciones(condicionesIngles);
-                    String humedad = extraerValor(diaJson, "\"humidity\":");
-
-                    // Formatear la fecha
-                    String fechaFormateada = formatearFecha(fecha);
-
-                    // Mostrar con formato de tabla
-                    System.out.printf("%-12s %-20s %-12s %-12s %-10s\n",
-                            fechaFormateada, condicionesEspanol, tempMax + "°C", tempMin + "°C", humedad + "%");
-                }
-            }
-            System.out.println("═".repeat(70));
-        } catch (Exception e) {
-            System.out.println("Error al obtener pronóstico semanal: " + e.getMessage());
-        }
-    }
-
-    // Méto\do para traducir condiciones del inglés al español
-    private static String traducirCondiciones(String condicionesIngles) {
-        if (condicionesIngles.equals("N/A")) {
-            return "No disponible";
-        }
-
-        // Buscar traducción exacta
-        String traduccion = TRADUCCION_CONDICIONES.get(condicionesIngles);
-        if (traduccion != null) {
-            return traduccion;
-        }
-
-        // Si no encuentra traducción exacta, buscar por palabras clave
-        for (Map.Entry<String, String> entry : TRADUCCION_CONDICIONES.entrySet()) {
-            if (condicionesIngles.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-
-        // Si no hay traducción, devolver el original
-        return condicionesIngles;
-    }
-
-    // Méto\do para formatear fecha de "YYYY-MM-DD" a "DD/MM"
-    private static String formatearFecha(String fecha) {
-        try {
-            if (fecha.equals("N/A")) return fecha;
-
-            String[] partes = fecha.split("-");
-            if (partes.length == 3) {
-                return partes[2] + "/" + partes[1];
-            }
-        } catch (Exception e) {
-            // Si hay error, devolver la fecha original
-        }
-        return fecha;
-    }
-
-    private static String extraerDiaEspecifico(String jsonResponse, int indiceDia) {
-        try {
-            int startIndex = jsonResponse.indexOf("\"days\":[");
-            if (startIndex == -1) return null;
-
-            startIndex += 8; // Saltar "\"days\":["
-
-            int currentIndex = startIndex;
-            for (int i = 0; i <= indiceDia; i++) {
-                if (currentIndex >= jsonResponse.length()) return null;
-
-                int startObj = jsonResponse.indexOf('{', currentIndex);
-                if (startObj == -1) return null;
-
-                int endObj = encontrarFinObjeto(jsonResponse, startObj);
-                if (endObj == -1) return null;
-
-                if (i == indiceDia) {
-                    return jsonResponse.substring(startObj, endObj + 1);
-                }
-
-                currentIndex = endObj + 1;
-            }
-        } catch (Exception e) {
-            System.out.println("Error extrayendo día " + indiceDia + ": " + e.getMessage());
-        }
-        return null;
-    }
-
-    private static int encontrarFinObjeto(String json, int start) {
-        int count = 1;
-        int index = start + 1;
-
-        while (index < json.length() && count > 0) {
-            char c = json.charAt(index);
-            if (c == '{') count++;
-            else if (c == '}') count--;
-            index++;
-        }
-
-        return (count == 0) ? index - 1 : -1;
-    }
-
-    private static String extraerValor(String json, String clave) {
-        try {
-            int startIndex = json.indexOf(clave);
-            if (startIndex == -1) return "N/A";
-
-            startIndex += clave.length();
-
-            int endIndex = json.indexOf(",", startIndex);
-            if (endIndex == -1) endIndex = json.indexOf("}", startIndex);
-            if (endIndex == -1) return "N/A";
-
-            String valor = json.substring(startIndex, endIndex).trim();
-
-            if (valor.startsWith("\"") && valor.endsWith("\"")) {
-                valor = valor.substring(1, valor.length() - 1);
-            }
-
-            return valor;
-        } catch (Exception e) {
-            return "N/A";
-        }
-    }
-
-    private static String extraerValorTexto(String json, String clave) {
-        try {
-            int startIndex = json.indexOf(clave);
-            if (startIndex == -1) return "N/A";
-
-            startIndex += clave.length();
-
-            int quoteStart = json.indexOf("\"", startIndex);
-            if (quoteStart == -1) return "N/A";
-
+            int colon = json.indexOf(":", idx);
+            int quoteStart = json.indexOf("\"", colon + 1);
             int quoteEnd = json.indexOf("\"", quoteStart + 1);
-            if (quoteEnd == -1) return "N/A";
 
-            return json.substring(quoteStart + 1, quoteEnd);
-        } catch (Exception e) {
-            return "N/A";
+            if (quoteStart != -1 && quoteEnd != -1) {
+                return json.substring(quoteStart + 1, quoteEnd);
+            }
+        } catch (Exception e) { return ""; }
+        return "";
+    }
+
+    private static String capitalizarTexto(String texto) {
+        if (texto == null || texto.isEmpty()) return "";
+        String[] palabras = texto.split(" ");
+        StringBuilder sb = new StringBuilder();
+        for (String p : palabras) {
+            if (p.length() > 0) {
+                sb.append(Character.toUpperCase(p.charAt(0)));
+                if (p.length() > 1) sb.append(p.substring(1).toLowerCase());
+                sb.append(" ");
+            }
         }
+        return sb.toString().trim();
+    }
+
+    // Métodos auxiliares de extracción con Regex
+    private static String extraerConRegex(String json, String regexPattern) {
+        try {
+            Pattern p = Pattern.compile(regexPattern);
+            Matcher m = p.matcher(json);
+            if (m.find()) return m.group(1);
+        } catch(Exception e) {}
+        return "";
+    }
+
+    private static double extraerDoubleRegex(String json, String regexPattern) {
+        try {
+            Pattern p = Pattern.compile(regexPattern);
+            Matcher m = p.matcher(json);
+            if (m.find()) return Double.parseDouble(m.group(1));
+        } catch(Exception e) {}
+        return 0.0;
+    }
+
+    // Separa el array de días del JSON en Strings individuales
+    private static List<String> separarDias(String json) {
+        List<String> dias = new ArrayList<>();
+        int start = json.indexOf("\"days\"");
+        if (start == -1) return dias;
+        int open = json.indexOf("[", start);
+        if (open == -1) return dias;
+        int bal = 0, sObj = -1;
+        for (int i = open; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (c == '{') { if(bal==0) sObj=i; bal++; }
+            else if (c == '}') { bal--; if(bal==0 && sObj!=-1) { dias.add(json.substring(sObj, i+1)); sObj=-1; } }
+            else if (c == ']' && bal==0) break;
+        }
+        return dias;
+    }
+
+    private static String traducirCondiciones(String c) {
+        for (Map.Entry<String, String> e : TRADUCCION_CONDICIONES.entrySet()) {
+            if (c.contains(e.getKey())) return e.getValue();
+        }
+        return c;
     }
 }
