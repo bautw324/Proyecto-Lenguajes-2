@@ -151,7 +151,7 @@ public class PronosticoTiempo {
         }
     }
 
-    // Método para traducir condiciones del inglés al español
+    // Méto\do para traducir condiciones del inglés al español
     private static String traducirCondiciones(String condicionesIngles) {
         if (condicionesIngles.equals("N/A")) {
             return "No disponible";
@@ -174,7 +174,7 @@ public class PronosticoTiempo {
         return condicionesIngles;
     }
 
-    // Método para formatear fecha de "YYYY-MM-DD" a "DD/MM"
+    // Méto\do para formatear fecha de "YYYY-MM-DD" a "DD/MM"
     private static String formatearFecha(String fecha) {
         try {
             if (fecha.equals("N/A")) return fecha;
